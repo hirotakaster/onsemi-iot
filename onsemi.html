@@ -1,0 +1,67 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html lang="ja">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <script crossorigin src="https://unpkg.com/react@16/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.38/browser.min.js"></script>
+    <script src="mqttws31.js"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <script type="text/babel">
+var mqttclient = new Paho.MQTT.Client("mqtt server name", "mqtt server port", "mqttclientId");
+mqttclient.onConnectionLost = onConnectionLost;
+mqttclient.onMessageArrived = onMessageArrived;
+mqttclient.connect({onSuccess:onConnect});
+
+function ShowData(props) {
+  return <div>{props.name}:{props.value}</div>;
+}
+
+function App(props) {
+  return (
+    <div>
+      <ShowData name={'light'} value={props.light} />
+      <ShowData name={'stepper'} value={props.stepper} />
+    </div>
+  );
+}
+
+function onConnect() {
+    console.log("onConnect");
+    mqttclient.subscribe("onsemi/");
+}
+
+function onConnectionLost(responseObject) {
+    if (responseObject.errorCode !== 0) {
+        console.log("onConnectionLost:"+responseObject.errorMessage);
+    }
+}
+
+function onMessageArrived(message) {
+    console.log("onMessageArrived:"+message.payloadString);
+    let data = JSON.parse(message.payloadString);
+
+    ReactDOM.render( 
+        <App light={data['Light_Intensity']} stepper={data['Motor_Angle']} />,
+        document.getElementById('app')
+    );
+
+    var speechText = "";
+    if (data["Motor_Angle"] < 0) {
+        speechText = "シャッターを閉じるよ";
+    } else {
+        speechText = "シャッターを開けるよ";
+    }
+    
+    var ssu = new SpeechSynthesisUtterance();
+    var voices = window.speechSynthesis.getVoices();
+    ssu.lang = 'ja-JP';
+    ssu.text = speechText;
+    speechSynthesis.speak(ssu);
+}
+    </script>
+  </body>
+</html>
